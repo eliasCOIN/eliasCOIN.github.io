@@ -1,1 +1,87 @@
-hello
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebView Security Tests</title>
+    <script>
+        function testMultipleMediaAccess() {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+                .then(stream => {
+                    alert('Multiple media access allowed!');
+                    stream.getTracks().forEach(track => track.stop());
+                })
+                .catch(err => alert('Multiple media access denied: ' + err));
+        }
+
+        function testRapidPermissionRequests() {
+            for (let i = 0; i < 5; i++) {
+                navigator.permissions.query({ name: 'camera' }).then(result => {
+                    alert('Permission request ' + (i + 1) + ': ' + result.state);
+                }).catch(err => alert('Permission request error: ' + err));
+            }
+        }
+
+        function testAudioAccess() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    alert('Audio access allowed!');
+                    stream.getTracks().forEach(track => track.stop());
+                })
+                .catch(err => alert('Audio access denied: ' + err));
+        }
+
+        function testMultipleVideoStreams() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream1 => {
+                    navigator.mediaDevices.getUserMedia({ video: true })
+                        .then(stream2 => {
+                            alert('Multiple video streams allowed!');
+                            stream1.getTracks().forEach(track => track.stop());
+                            stream2.getTracks().forEach(track => track.stop());
+                        }).catch(err => alert('Second video stream denied: ' + err));
+                }).catch(err => alert('First video stream denied: ' + err));
+        }
+
+        function testSSLValidation() {
+            fetch('https://self-signed.badssl.com/')
+                .then(res => alert('Accepted invalid SSL certificate!'))
+                .catch(err => alert('SSL validation worked, request blocked: ' + err));
+        }
+
+        function testWebRTCIpLeak() {
+            let peerConnection = new RTCPeerConnection({ iceServers: [] });
+            peerConnection.createDataChannel('test');
+            peerConnection.createOffer().then(offer => {
+                peerConnection.setLocalDescription(offer);
+            });
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    alert('Possible WebRTC IP Leak: ' + event.candidate.candidate);
+                }
+            };
+        }
+
+        function testClipboardWrite() {
+            navigator.clipboard.writeText('Clipboard test data')
+                .then(() => alert('Clipboard write succeeded!'))
+                .catch(err => alert('Clipboard write blocked: ' + err));
+        }
+
+        function testClipboardRead() {
+            navigator.clipboard.readText()
+                .then(text => alert('Clipboard contains: ' + text))
+                .catch(err => alert('Clipboard read blocked: ' + err));
+        }
+    </script>
+</head>
+<body>
+    <h2>WebView Security Tests</h2>
+    <button onclick="testMultipleMediaAccess()">Test Multiple Media Access</button>
+    <button onclick="testRapidPermissionRequests()">Test Rapid Permission Requests</button>
+    <button onclick="testAudioAccess()">Test Audio Access</button>
+    <button onclick="testMultipleVideoStreams()">Test Multiple Video Streams</button>
+    <button onclick="testSSLValidation()">Test SSL Spoofing</button>
+    <button onclick="testWebRTCIpLeak()">Test WebRTC Leak</button>
+    <button onclick="testClipboardWrite()">Test Clipboard Write</button>
+    <button onclick="testClipboardRead()">Test Clipboard Read</button>
+</body>
+</html>

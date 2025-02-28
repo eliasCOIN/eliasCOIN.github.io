@@ -1,15 +1,14 @@
-<!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>lalala</title>
-</head>
+  </head>
 <body>
-    <script>
-        function spoof() {
-            location.href = "https://www.google.com/csi?random=" + Math.random();
-            setTimeout(() => { document.body.innerHTML = 'This is not Google!'; }, 50);
-        }
-    </script>
-    <input type="button" value="Run" onclick="setInterval(spoof, 20);"/>
+  <script>
+    function spoof(){
+    location="https://www.google.com/csi?random="+Math.random();
+    document.body.innerHTML='This is not Google!';
+    }
+</script>
+<input type="button" value="Run" onclick="setInterval(spoof(),20);"/>
 </body>
-</html>
+</html> 

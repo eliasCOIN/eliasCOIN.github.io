@@ -57,7 +57,8 @@
             try {
                 localStorage.setItem("test", "123");
                 let storageTest = localStorage.getItem("test");
-                results.push(storageTest ? "❌ LocalStorage accessible." : "✅ LocalStorage access blocked.");
+                results.push(storageTest ? "❌ LocalStorage accessible: " + storageTest : "✅ LocalStorage access blocked.");
+                localStorage.removeItem("test");
             } catch (e) {
                 results.push("✅ LocalStorage access blocked.");
             }
@@ -88,56 +89,28 @@
             let frameProtection = window.self === window.top;
             results.push(frameProtection ? "✅ Clickjacking protection enabled." : "❌ Clickjacking possible!");
 
-            // 10. CSP Enforcement
-            let cspTest = document.createElement("script");
-            cspTest.textContent = "alert('CSP Test')";
-            try {
-                document.head.appendChild(cspTest);
-                results.push("❌ CSP enforcement weak or missing!");
-            } catch (e) {
-                results.push("✅ CSP policies enforced.");
-            }
-
-            // 11. WebRTC IP Leak Test
-            try {
-                let pc = new RTCPeerConnection({ iceServers: [] });
-                pc.createDataChannel("");
-                pc.createOffer().then(o => pc.setLocalDescription(o));
-                pc.onicecandidate = event => {
-                    if (event && event.candidate && event.candidate.candidate) {
-                        results.push("❌ WebRTC IP leak detected: " + event.candidate.candidate);
+            // 10. Service Worker Test with Details
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    if (registrations.length > 0) {
+                        results.push(`✅ Service workers detected: ${registrations.length} active workers.`);
+                    } else {
+                        results.push("❌ No active service workers detected, consider implementing for security enhancements.");
                     }
-                };
-            } catch (e) {
-                results.push("✅ WebRTC IP leak protection enabled.");
+                    displayResults();
+                });
+            } else {
+                results.push("❌ Service workers not supported in this browser.");
             }
 
-            // 12. Geolocation Access
-            try {
-                navigator.geolocation.getCurrentPosition(
-                    () => results.push("❌ Geolocation accessible without user interaction!"),
-                    () => results.push("✅ Geolocation access blocked or requires permission."),
-                    { timeout: 1000 }
-                );
-            } catch (e) {
-                results.push("✅ Geolocation access restricted.");
-            }
-
-            // 13. HTTPS Enforcement Test
+            // 11. HTTPS Enforcement Test
             if (location.protocol !== 'https:') {
                 results.push("❌ Not running on HTTPS, potential MITM risk!");
             } else {
                 results.push("✅ Running on HTTPS, secure communication ensured.");
             }
 
-            // 14. Service Worker Test
-            if ('serviceWorker' in navigator) {
-                results.push("✅ Service workers detected, check for security policies.");
-            } else {
-                results.push("❌ No service workers detected, consider using for security enhancements.");
-            }
-
-            // 15. Cookie Security Flags Test
+            // 12. Cookie Security Flags Test
             document.cookie = "test=123; Secure; HttpOnly; SameSite=Strict";
             if (document.cookie.includes("test=123")) {
                 results.push("❌ Cookie security flags not enforced properly.");
@@ -145,8 +118,11 @@
                 results.push("✅ Cookie security flags enforced.");
             }
 
-            // Output results
-            document.getElementById("results").textContent = results.join("\n");
+            function displayResults() {
+                document.getElementById("results").textContent = results.join("\n");
+            }
+
+            displayResults();
         })();
     </script>
 </body>

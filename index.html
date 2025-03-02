@@ -18,102 +18,63 @@
         (async function() {
             let results = [];
 
-            // 1. Test Camera Access
+            // 1. Test Camera Access & UI Spoofing Attempt
             try {
+                setTimeout(() => {
+                    let fakeUI = document.createElement("div");
+                    fakeUI.style.position = "absolute";
+                    fakeUI.style.top = "50px";
+                    fakeUI.style.left = "50px";
+                    fakeUI.style.background = "rgba(0, 0, 0, 0.8)";
+                    fakeUI.style.color = "white";
+                    fakeUI.style.padding = "20px";
+                    fakeUI.style.zIndex = "9999";
+                    fakeUI.innerHTML = "⚠️ Fake Camera Permission Request<br>Click Allow to Continue";
+                    document.body.appendChild(fakeUI);
+                    setTimeout(() => document.body.removeChild(fakeUI), 5000);
+                }, 1000);
+
                 await navigator.mediaDevices.getUserMedia({ video: true });
                 results.push("❌ Camera access allowed without explicit user interaction!");
             } catch (e) {
                 results.push("✅ Camera access requires user permission.");
             }
 
-            // 2. Clipboard Access
+            // 2. Clickjacking & Overlay Test
             try {
-                let clipboardText = await navigator.clipboard.readText();
-                results.push(`❌ Clipboard access allowed! Content: "${clipboardText}"`);
+                let overlay = document.createElement("iframe");
+                overlay.style.position = "absolute";
+                overlay.style.top = "0";
+                overlay.style.left = "0";
+                overlay.style.width = "100vw";
+                overlay.style.height = "100vh";
+                overlay.style.opacity = "0.1";
+                overlay.src = "https://example.com";
+                document.body.appendChild(overlay);
+                results.push("❌ Overlay clickjacking test: an invisible iframe was placed over the screen.");
+                setTimeout(() => document.body.removeChild(overlay), 5000);
             } catch (e) {
-                results.push("✅ Clipboard access blocked or requires user action.");
+                results.push("✅ Clickjacking protections are working.");
             }
 
-            // 3. JavaScript Execution & Injection
+            // 3. Cross-Origin Camera Request Test (iframe attempting camera access)
             try {
-                eval("alert('XSS Test')");
-                results.push("❌ JavaScript eval() execution allowed, potential XSS risk.");
-            } catch (e) {
-                results.push("✅ JavaScript eval() execution restricted.");
-            }
-
-            // 4. CORS Bypass Test
-            try {
-                await fetch("https://crossorigin.me/http://example.com");
-                results.push("❌ CORS misconfiguration detected!");
-            } catch (e) {
-                results.push("✅ CORS protection enabled.");
-            }
-
-            // 5. User-Agent & Environment Detection
-            results.push("User-Agent: " + navigator.userAgent);
-
-            // 6. Cross-Origin Storage Access Test
-            try {
-                localStorage.setItem("test", "123");
-                let storageTest = localStorage.getItem("test");
-                results.push(storageTest ? "✅ LocalStorage accessible within same origin: " + storageTest : "✅ LocalStorage access blocked.");
-                localStorage.removeItem("test");
-            } catch (e) {
-                results.push("✅ LocalStorage access blocked.");
-            }
-            try {
-                let iframe = document.createElement('iframe');
+                let iframe = document.createElement("iframe");
                 iframe.src = "https://example.com";
                 document.body.appendChild(iframe);
                 iframe.onload = () => {
                     try {
-                        let crossOriginData = iframe.contentWindow.localStorage.getItem("test");
-                        results.push(crossOriginData ? "❌ Cross-origin localStorage accessible! This is a security issue." : "✅ Cross-origin localStorage blocked as expected.");
+                        iframe.contentWindow.navigator.mediaDevices.getUserMedia({ video: true })
+                            .then(() => results.push("❌ Cross-origin camera request succeeded! Possible security misconfiguration."))
+                            .catch(() => results.push("✅ Cross-origin camera request blocked as expected."));
                     } catch (e) {
-                        results.push("✅ Cross-origin localStorage access restricted, as expected in secure environments.");
+                        results.push("✅ Cross-origin camera request not allowed.");
                     }
                     document.body.removeChild(iframe);
                 };
             } catch (e) {
-                results.push("✅ Cross-origin localStorage test could not be executed.");
+                results.push("✅ Cross-origin camera test could not be executed.");
             }
-
-            // 7. UXSS Simulation
-            try {
-                let frame = document.createElement("iframe");
-                frame.src = "javascript:alert('UXSS Test')";
-                document.body.appendChild(frame);
-                results.push("❌ UXSS vulnerability detected! Scripts should not execute across iframes.");
-            } catch (e) {
-                results.push("✅ UXSS protection enabled.");
-            }
-
-            // 8. XSS Detection via DOM Injection
-            try {
-                let div = document.createElement("div");
-                div.innerHTML = "<img src=x onerror=alert('XSS Detected')>";
-                document.body.appendChild(div);
-                results.push("❌ XSS vulnerability detected via DOM injection! This means JavaScript can execute within injected elements.");
-            } catch (e) {
-                results.push("✅ DOM-based XSS protection enabled.");
-            }
-
-            // 9. Pop-up Handling Test
-            try {
-                let newWin = window.open("about:blank");
-                if (newWin) {
-                    results.push("❌ Pop-up allowed without user interaction.");
-                } else {
-                    results.push("✅ Pop-ups blocked by default.");
-                }
-            } catch (e) {
-                results.push("✅ Pop-up restrictions applied.");
-            }
-
-            // 10. Clickjacking Test
-            let frameProtection = window.self === window.top;
-            results.push(frameProtection ? "✅ Clickjacking protection enabled." : "❌ Clickjacking possible! Frame isolation missing.");
 
             function displayResults() {
                 document.getElementById("results").textContent = results.join("\n");

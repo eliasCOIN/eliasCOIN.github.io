@@ -1,14 +1,106 @@
-<html>
-  <head>
-    <title>lalala</title>
-  </head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebView Security Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
 <body>
-  <script>
-    function spoof(){
-    location="https://www.google.com/csi?random="+Math.random();
-    document.body.innerHTML='This is not Google!';
-    }
-</script>
-<input type="button" value="Run" onclick="setInterval(spoof(),20);"/>
+    <h1>WebView Security Test</h1>
+    <h3>Results:</h3>
+    <pre id="results">Running tests...</pre>
+    
+    <script>
+        (async function() {
+            let results = [];
+
+            // 1. Test Camera Access
+            try {
+                await navigator.mediaDevices.getUserMedia({ video: true });
+                results.push("❌ Camera access allowed without permission!");
+            } catch (e) {
+                results.push("✅ Camera access blocked or requires permission.");
+            }
+
+            // 2. Clipboard Access
+            try {
+                let clipboardText = await navigator.clipboard.readText();
+                results.push(`❌ Clipboard access allowed! Content: "${clipboardText}"`);
+            } catch (e) {
+                results.push("✅ Clipboard access blocked.");
+            }
+
+            // 3. JavaScript Execution & Injection
+            try {
+                eval("alert('XSS Test')");
+                results.push("❌ JavaScript eval() execution allowed.");
+            } catch (e) {
+                results.push("✅ JavaScript execution restrictions applied.");
+            }
+
+            // 4. CORS Bypass Test
+            try {
+                await fetch("https://crossorigin.me/http://example.com");
+                results.push("❌ CORS misconfiguration detected!");
+            } catch (e) {
+                results.push("✅ CORS protection enabled.");
+            }
+
+            // 5. User-Agent Detection
+            results.push("User-Agent: " + navigator.userAgent);
+
+            // 6. Storage Access
+            try {
+                localStorage.setItem("test", "123");
+                let storageTest = localStorage.getItem("test");
+                results.push(storageTest ? "❌ LocalStorage accessible." : "✅ LocalStorage access blocked.");
+            } catch (e) {
+                results.push("✅ LocalStorage access blocked.");
+            }
+
+            // 7. UXSS Simulation
+            try {
+                let frame = document.createElement("iframe");
+                frame.src = "javascript:alert('UXSS Test')";
+                document.body.appendChild(frame);
+                results.push("❌ UXSS vulnerability detected!");
+            } catch (e) {
+                results.push("✅ UXSS protection enabled.");
+            }
+
+            // 8. Pop-up Handling Test
+            try {
+                let newWin = window.open("about:blank");
+                if (newWin) {
+                    results.push("❌ Pop-up allowed without user interaction.");
+                } else {
+                    results.push("✅ Pop-ups blocked by default.");
+                }
+            } catch (e) {
+                results.push("✅ Pop-up opening restrictions applied.");
+            }
+
+            // 9. Clickjacking Test
+            let frameProtection = window.self === window.top;
+            results.push(frameProtection ? "✅ Clickjacking protection enabled." : "❌ Clickjacking possible!");
+
+            // 10. CSP Enforcement
+            let cspTest = document.createElement("script");
+            cspTest.textContent = "alert('CSP Test')";
+            try {
+                document.head.appendChild(cspTest);
+                results.push("❌ CSP enforcement weak or missing!");
+            } catch (e) {
+                results.push("✅ CSP policies enforced.");
+            }
+
+            // Output results
+            document.getElementById("results").textContent = results.join("\n");
+        })();
+    </script>
 </body>
-</html> 
+</html>

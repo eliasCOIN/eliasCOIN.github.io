@@ -6,7 +6,7 @@
     <title>WebView Security Test</title>
     <style>
         body { font-family: Arial, sans-serif; }
-        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -21,9 +21,9 @@
             // 1. Test Camera Access
             try {
                 await navigator.mediaDevices.getUserMedia({ video: true });
-                results.push("❌ Camera access allowed without permission!");
+                results.push("❌ Camera access allowed without explicit user interaction!");
             } catch (e) {
-                results.push("✅ Camera access blocked or requires permission.");
+                results.push("✅ Camera access requires user permission.");
             }
 
             // 2. Clipboard Access
@@ -31,15 +31,15 @@
                 let clipboardText = await navigator.clipboard.readText();
                 results.push(`❌ Clipboard access allowed! Content: "${clipboardText}"`);
             } catch (e) {
-                results.push("✅ Clipboard access blocked.");
+                results.push("✅ Clipboard access blocked or requires user action.");
             }
 
             // 3. JavaScript Execution & Injection
             try {
                 eval("alert('XSS Test')");
-                results.push("❌ JavaScript eval() execution allowed.");
+                results.push("❌ JavaScript eval() execution allowed, potential XSS risk.");
             } catch (e) {
-                results.push("✅ JavaScript execution restrictions applied.");
+                results.push("✅ JavaScript eval() execution restricted.");
             }
 
             // 4. CORS Bypass Test
@@ -50,7 +50,7 @@
                 results.push("✅ CORS protection enabled.");
             }
 
-            // 5. User-Agent Detection
+            // 5. User-Agent & Environment Detection
             results.push("User-Agent: " + navigator.userAgent);
 
             // 6. Storage Access
@@ -81,7 +81,7 @@
                     results.push("✅ Pop-ups blocked by default.");
                 }
             } catch (e) {
-                results.push("✅ Pop-up opening restrictions applied.");
+                results.push("✅ Pop-up restrictions applied.");
             }
 
             // 9. Clickjacking Test
@@ -96,6 +96,53 @@
                 results.push("❌ CSP enforcement weak or missing!");
             } catch (e) {
                 results.push("✅ CSP policies enforced.");
+            }
+
+            // 11. WebRTC IP Leak Test
+            try {
+                let pc = new RTCPeerConnection({ iceServers: [] });
+                pc.createDataChannel("");
+                pc.createOffer().then(o => pc.setLocalDescription(o));
+                pc.onicecandidate = event => {
+                    if (event && event.candidate && event.candidate.candidate) {
+                        results.push("❌ WebRTC IP leak detected: " + event.candidate.candidate);
+                    }
+                };
+            } catch (e) {
+                results.push("✅ WebRTC IP leak protection enabled.");
+            }
+
+            // 12. Geolocation Access
+            try {
+                navigator.geolocation.getCurrentPosition(
+                    () => results.push("❌ Geolocation accessible without user interaction!"),
+                    () => results.push("✅ Geolocation access blocked or requires permission."),
+                    { timeout: 1000 }
+                );
+            } catch (e) {
+                results.push("✅ Geolocation access restricted.");
+            }
+
+            // 13. HTTPS Enforcement Test
+            if (location.protocol !== 'https:') {
+                results.push("❌ Not running on HTTPS, potential MITM risk!");
+            } else {
+                results.push("✅ Running on HTTPS, secure communication ensured.");
+            }
+
+            // 14. Service Worker Test
+            if ('serviceWorker' in navigator) {
+                results.push("✅ Service workers detected, check for security policies.");
+            } else {
+                results.push("❌ No service workers detected, consider using for security enhancements.");
+            }
+
+            // 15. Cookie Security Flags Test
+            document.cookie = "test=123; Secure; HttpOnly; SameSite=Strict";
+            if (document.cookie.includes("test=123")) {
+                results.push("❌ Cookie security flags not enforced properly.");
+            } else {
+                results.push("✅ Cookie security flags enforced.");
             }
 
             // Output results

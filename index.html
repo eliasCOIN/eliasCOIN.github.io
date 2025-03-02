@@ -20,22 +20,27 @@
 
             // 1. Test Camera Access & UI Spoofing Attempt
             try {
+                let fakeUI = document.createElement("div");
+                fakeUI.style.position = "absolute";
+                fakeUI.style.top = "50%";
+                fakeUI.style.left = "50%";
+                fakeUI.style.transform = "translate(-50%, -50%)";
+                fakeUI.style.background = "white";
+                fakeUI.style.color = "black";
+                fakeUI.style.padding = "20px";
+                fakeUI.style.border = "2px solid black";
+                fakeUI.style.zIndex = "9999";
+                fakeUI.style.boxShadow = "0px 0px 10px rgba(0,0,0,0.5)";
+                fakeUI.innerHTML = `<b>example.com</b> wants to access your camera.<br><button onclick="alert('Fake Allow Clicked!')">Allow</button> <button>Deny</button>`;
+                document.body.appendChild(fakeUI);
+                
                 setTimeout(() => {
-                    let fakeUI = document.createElement("div");
-                    fakeUI.style.position = "absolute";
-                    fakeUI.style.top = "50px";
-                    fakeUI.style.left = "50px";
-                    fakeUI.style.background = "rgba(0, 0, 0, 0.8)";
-                    fakeUI.style.color = "white";
-                    fakeUI.style.padding = "20px";
-                    fakeUI.style.zIndex = "9999";
-                    fakeUI.innerHTML = "⚠️ Fake Camera Permission Request<br>Click Allow to Continue";
-                    document.body.appendChild(fakeUI);
-                    setTimeout(() => document.body.removeChild(fakeUI), 5000);
-                }, 1000);
-
-                await navigator.mediaDevices.getUserMedia({ video: true });
-                results.push("❌ Camera access allowed without explicit user interaction!");
+                    document.body.removeChild(fakeUI);
+                    navigator.mediaDevices.getUserMedia({ video: true })
+                        .then(() => results.push("❌ Camera access allowed without explicit user interaction!"))
+                        .catch(() => results.push("✅ Camera access requires user permission."));
+                }, 3000); // Display fake UI for 3 seconds before real request
+                
             } catch (e) {
                 results.push("✅ Camera access requires user permission.");
             }

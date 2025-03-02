@@ -53,7 +53,7 @@
             // 5. User-Agent & Environment Detection
             results.push("User-Agent: " + navigator.userAgent);
 
-            // 6. Storage Access
+            // 6. Cross-Origin Storage Access Test
             try {
                 localStorage.setItem("test", "123");
                 let storageTest = localStorage.getItem("test");
@@ -61,6 +61,22 @@
                 localStorage.removeItem("test");
             } catch (e) {
                 results.push("✅ LocalStorage access blocked.");
+            }
+            try {
+                let iframe = document.createElement('iframe');
+                iframe.src = "https://example.com";
+                document.body.appendChild(iframe);
+                iframe.onload = () => {
+                    try {
+                        let crossOriginData = iframe.contentWindow.localStorage.getItem("test");
+                        results.push(crossOriginData ? "❌ Cross-origin localStorage accessible!" : "✅ Cross-origin localStorage blocked.");
+                    } catch (e) {
+                        results.push("✅ Cross-origin localStorage access restricted.");
+                    }
+                    document.body.removeChild(iframe);
+                };
+            } catch (e) {
+                results.push("✅ Cross-origin localStorage test could not be executed.");
             }
 
             // 7. UXSS Simulation
@@ -73,7 +89,17 @@
                 results.push("✅ UXSS protection enabled.");
             }
 
-            // 8. Pop-up Handling Test
+            // 8. XSS Detection via DOM Injection
+            try {
+                let div = document.createElement("div");
+                div.innerHTML = "<img src=x onerror=alert('XSS Detected')>";
+                document.body.appendChild(div);
+                results.push("❌ XSS vulnerability detected via DOM injection!");
+            } catch (e) {
+                results.push("✅ DOM-based XSS protection enabled.");
+            }
+
+            // 9. Pop-up Handling Test
             try {
                 let newWin = window.open("about:blank");
                 if (newWin) {
@@ -85,11 +111,11 @@
                 results.push("✅ Pop-up restrictions applied.");
             }
 
-            // 9. Clickjacking Test
+            // 10. Clickjacking Test
             let frameProtection = window.self === window.top;
             results.push(frameProtection ? "✅ Clickjacking protection enabled." : "❌ Clickjacking possible!");
 
-            // 10. Service Worker Test with Details
+            // 11. Service Worker Test with Details
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(registrations => {
                     if (registrations.length > 0) {
@@ -103,14 +129,14 @@
                 results.push("❌ Service workers not supported in this browser.");
             }
 
-            // 11. HTTPS Enforcement Test
+            // 12. HTTPS Enforcement Test
             if (location.protocol !== 'https:') {
                 results.push("❌ Not running on HTTPS, potential MITM risk!");
             } else {
                 results.push("✅ Running on HTTPS, secure communication ensured.");
             }
 
-            // 12. Cookie Security Flags Test
+            // 13. Cookie Security Flags Test
             document.cookie = "test=123; Secure; HttpOnly; SameSite=Strict";
             if (document.cookie.includes("test=123")) {
                 results.push("❌ Cookie security flags not enforced properly.");

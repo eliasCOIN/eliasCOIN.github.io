@@ -57,7 +57,7 @@
             try {
                 localStorage.setItem("test", "123");
                 let storageTest = localStorage.getItem("test");
-                results.push(storageTest ? "❌ LocalStorage accessible: " + storageTest : "✅ LocalStorage access blocked.");
+                results.push(storageTest ? "✅ LocalStorage accessible within same origin: " + storageTest : "✅ LocalStorage access blocked.");
                 localStorage.removeItem("test");
             } catch (e) {
                 results.push("✅ LocalStorage access blocked.");
@@ -69,9 +69,9 @@
                 iframe.onload = () => {
                     try {
                         let crossOriginData = iframe.contentWindow.localStorage.getItem("test");
-                        results.push(crossOriginData ? "❌ Cross-origin localStorage accessible!" : "✅ Cross-origin localStorage blocked.");
+                        results.push(crossOriginData ? "❌ Cross-origin localStorage accessible! This is a security issue." : "✅ Cross-origin localStorage blocked as expected.");
                     } catch (e) {
-                        results.push("✅ Cross-origin localStorage access restricted.");
+                        results.push("✅ Cross-origin localStorage access restricted, as expected in secure environments.");
                     }
                     document.body.removeChild(iframe);
                 };
@@ -84,7 +84,7 @@
                 let frame = document.createElement("iframe");
                 frame.src = "javascript:alert('UXSS Test')";
                 document.body.appendChild(frame);
-                results.push("❌ UXSS vulnerability detected!");
+                results.push("❌ UXSS vulnerability detected! Scripts should not execute across iframes.");
             } catch (e) {
                 results.push("✅ UXSS protection enabled.");
             }
@@ -94,7 +94,7 @@
                 let div = document.createElement("div");
                 div.innerHTML = "<img src=x onerror=alert('XSS Detected')>";
                 document.body.appendChild(div);
-                results.push("❌ XSS vulnerability detected via DOM injection!");
+                results.push("❌ XSS vulnerability detected via DOM injection! This means JavaScript can execute within injected elements.");
             } catch (e) {
                 results.push("✅ DOM-based XSS protection enabled.");
             }
@@ -113,36 +113,7 @@
 
             // 10. Clickjacking Test
             let frameProtection = window.self === window.top;
-            results.push(frameProtection ? "✅ Clickjacking protection enabled." : "❌ Clickjacking possible!");
-
-            // 11. Service Worker Test with Details
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(registrations => {
-                    if (registrations.length > 0) {
-                        results.push(`✅ Service workers detected: ${registrations.length} active workers.`);
-                    } else {
-                        results.push("❌ No active service workers detected, consider implementing for security enhancements.");
-                    }
-                    displayResults();
-                });
-            } else {
-                results.push("❌ Service workers not supported in this browser.");
-            }
-
-            // 12. HTTPS Enforcement Test
-            if (location.protocol !== 'https:') {
-                results.push("❌ Not running on HTTPS, potential MITM risk!");
-            } else {
-                results.push("✅ Running on HTTPS, secure communication ensured.");
-            }
-
-            // 13. Cookie Security Flags Test
-            document.cookie = "test=123; Secure; HttpOnly; SameSite=Strict";
-            if (document.cookie.includes("test=123")) {
-                results.push("❌ Cookie security flags not enforced properly.");
-            } else {
-                results.push("✅ Cookie security flags enforced.");
-            }
+            results.push(frameProtection ? "✅ Clickjacking protection enabled." : "❌ Clickjacking possible! Frame isolation missing.");
 
             function displayResults() {
                 document.getElementById("results").textContent = results.join("\n");

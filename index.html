@@ -17,6 +17,7 @@
     <script>
         (async function() {
             let results = [];
+            let fakeAllowClicked = false;
 
             // 1. Test Camera Access & UI Spoofing Attempt
             try {
@@ -31,16 +32,26 @@
                 fakeUI.style.border = "2px solid black";
                 fakeUI.style.zIndex = "9999";
                 fakeUI.style.boxShadow = "0px 0px 10px rgba(0,0,0,0.5)";
-                fakeUI.innerHTML = `<b>example.com</b> wants to access your camera.<br><button onclick="alert('Fake Allow Clicked!')">Allow</button> <button>Deny</button>`;
+                fakeUI.innerHTML = `<b>example.com</b> wants to access your camera.<br>
+                    <button id="fakeAllow">Allow</button>
+                    <button id="fakeDeny">Deny</button>`;
                 document.body.appendChild(fakeUI);
                 
-                setTimeout(() => {
+                document.getElementById("fakeAllow").onclick = function() {
+                    fakeAllowClicked = true;
+                    alert('Fake Allow Clicked!');
                     document.body.removeChild(fakeUI);
-                    navigator.mediaDevices.getUserMedia({ video: true })
-                        .then(() => results.push("❌ Camera access allowed without explicit user interaction!"))
-                        .catch(() => results.push("✅ Camera access requires user permission."));
-                }, 3000); // Display fake UI for 3 seconds before real request
-                
+                    setTimeout(() => {
+                        navigator.mediaDevices.getUserMedia({ video: true })
+                            .then(() => results.push("❌ Camera access granted after fake prompt! This suggests a possible spoofing attack."))
+                            .catch(() => results.push("✅ User denied real camera request."));
+                    }, 3000); // Delay the real request to mimic delayed interaction
+                };
+
+                document.getElementById("fakeDeny").onclick = function() {
+                    document.body.removeChild(fakeUI);
+                    results.push("✅ User denied fake camera request.");
+                };
             } catch (e) {
                 results.push("✅ Camera access requires user permission.");
             }

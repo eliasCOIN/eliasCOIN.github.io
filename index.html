@@ -2,112 +2,166 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Security Sandbox Test</title>
+  <title>🚨 Security Sandbox Test Page</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #f9f9f9; }
+    #output { white-space: pre-wrap; background: #eee; padding: 10px; border-radius: 5px; }
+  </style>
 </head>
 <body>
-  <h1>🔒 Security Sandbox Test Page</h1>
-  <p>This page tries to simulate common malicious behaviors. Review what actions succeed or fail.</p>
-
-  <pre id="output"></pre>
+  <h1>🧪 Malicious Behavior Simulation</h1>
+  <p>This page simulates aggressive attempts to extract or access data from a device or sandboxed app browser.</p>
+  <pre id="output">Running tests...</pre>
 
   <script>
     const output = document.getElementById("output");
+    const log = msg => output.textContent += msg + '\n';
 
-    function log(msg) {
-      output.textContent += msg + '\n';
-    }
-
-    async function runTests() {
-      // Geolocation
+    (async () => {
+      // 1. Geolocation (precise)
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
           pos => log("🌍 Geolocation accessed: " + JSON.stringify(pos.coords)),
           err => log("❌ Geolocation blocked: " + err.message),
           { enableHighAccuracy: true }
         );
-      } else {
-        log("❌ Geolocation API not available");
       }
 
-      // Microphone & Camera
+      // 2. Camera & Microphone
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         log("🎥 Microphone/Camera access SUCCESS");
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(t => t.stop());
       } catch (e) {
         log("❌ Microphone/Camera access blocked: " + e.message);
       }
 
-      // Clipboard Read
+      // 3. Clipboard read
       try {
         const text = await navigator.clipboard.readText();
-        log("📋 Clipboard text read: " + text);
+        log("📋 Clipboard contents: " + text);
       } catch (e) {
-        log("❌ Clipboard read blocked: " + e.message);
+        log("❌ Clipboard access denied: " + e.message);
       }
 
-      // Permissions Query
-      try {
-        const permissions = ["geolocation", "microphone", "camera", "clipboard-read", "notifications"];
-        for (let name of permissions) {
-          const result = await navigator.permissions.query({ name });
-          log(`🔍 Permission ${name}: ${result.state}`);
+      // 4. Device memory
+      log("💾 Approx. device memory: " + (navigator.deviceMemory || "N/A"));
+
+      // 5. Battery info
+      if ('getBattery' in navigator) {
+        try {
+          const battery = await navigator.getBattery();
+          log(`🔋 Battery: ${battery.level * 100}% - Charging: ${battery.charging}`);
+        } catch (e) {
+          log("❌ Battery info blocked.");
         }
-      } catch (e) {
-        log("❌ Permissions query failed: " + e.message);
       }
 
-      // Fingerprinting Attempt
+      // 6. Sensor access
       try {
-        const fingerprint = {
-          userAgent: navigator.userAgent,
-          platform: navigator.platform,
-          languages: navigator.languages,
-          screen: {
-            width: screen.width,
-            height: screen.height,
-            colorDepth: screen.colorDepth
-          }
-        };
-        log("🧠 Fingerprint info: " + JSON.stringify(fingerprint));
+        const motionHandler = () => log("📱 Motion sensor accessible");
+        window.addEventListener('devicemotion', motionHandler);
+        setTimeout(() => window.removeEventListener('devicemotion', motionHandler), 3000);
       } catch (e) {
-        log("❌ Fingerprinting blocked: " + e.message);
+        log("❌ Motion sensor access blocked");
       }
 
-      // Window top-level navigation test (frame breakout)
+      // 7. Bluetooth access
+      try {
+        await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+        log("📶 Bluetooth device access possible");
+      } catch (e) {
+        log("❌ Bluetooth access blocked: " + e.message);
+      }
+
+      // 8. USB access
+      try {
+        await navigator.usb.requestDevice({ filters: [{}] });
+        log("🔌 USB device access possible");
+      } catch (e) {
+        log("❌ USB access blocked: " + e.message);
+      }
+
+      // 9. MIDI access
+      try {
+        await navigator.requestMIDIAccess();
+        log("🎼 MIDI access granted");
+      } catch (e) {
+        log("❌ MIDI access blocked");
+      }
+
+      // 10. Hidden form with password capture
+      document.body.innerHTML += `
+        <form id="phish" style="opacity:0;position:absolute;top:-1000px">
+          <input type="email" name="email" autocomplete="email" />
+          <input type="password" name="password" autocomplete="current-password" />
+        </form>`;
+      log("🕵️ Autofill phishing form injected (check if browser fills it)");
+
+      // 11. File upload trigger
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.style.position = "absolute";
+      fileInput.style.top = "-999px";
+      document.body.appendChild(fileInput);
+      fileInput.click();
+      log("📁 File picker triggered");
+
+      // 12. Fingerprinting
+      const fingerprint = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screen: `${screen.width}x${screen.height}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      };
+      log("🧠 Fingerprint: " + JSON.stringify(fingerprint));
+
+      // 13. Permissions summary
+      const permissionsToCheck = [
+        "geolocation", "camera", "microphone", "notifications", "clipboard-read"
+      ];
+      for (let name of permissionsToCheck) {
+        try {
+          const result = await navigator.permissions.query({ name });
+          log(`🔍 ${name} permission: ${result.state}`);
+        } catch (e) {
+          log(`❌ Failed to check ${name}`);
+        }
+      }
+
+      // 14. Attempt frame breakout
       try {
         if (window.top !== window.self) {
           window.top.location = "https://example.com";
-          log("🚨 Tried to escape iframe!");
+          log("🚨 Frame breakout ATTEMPTED");
         } else {
-          log("✅ Not inside an iframe.");
+          log("✅ Not inside iframe.");
         }
       } catch (e) {
         log("❌ Frame breakout blocked: " + e.message);
       }
 
-      // Attempt Web Crypto API
-      try {
-        const key = await crypto.subtle.generateKey(
-          { name: "AES-GCM", length: 256 },
-          true,
-          ["encrypt", "decrypt"]
-        );
-        log("🔐 Web Crypto API accessible.");
-      } catch (e) {
-        log("❌ Web Crypto API access blocked.");
+      // 15. MetaMask/Wallet phishing hook
+      if (typeof window.ethereum !== "undefined") {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          log("💸 Wallet access attempt: " + accounts.join(", "));
+        } catch (e) {
+          log("❌ Wallet access blocked or not granted.");
+        }
+      } else {
+        log("🪙 No crypto wallet provider detected (MetaMask/etc).");
       }
 
-      // Notification request
-      try {
-        const permission = await Notification.requestPermission();
-        log("🔔 Notification permission: " + permission);
-      } catch (e) {
-        log("❌ Notification request failed: " + e.message);
-      }
-    }
+      // 16. Intent scheme (Android attack vector)
+      const link = document.createElement("a");
+      link.href = "intent://example.com#Intent;scheme=https;package=com.example;end";
+      link.innerText = "Click here (intent://)";
+      document.body.appendChild(link);
+      log("📱 Android intent URI link inserted.");
 
-    runTests();
+    })();
   </script>
 </body>
 </html>

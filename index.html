@@ -1,103 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebView Security Test</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; white-space: pre-wrap; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Security Sandbox Test</title>
 </head>
 <body>
-    <h1>WebView Security Test</h1>
-    <h3>Results:</h3>
-    <pre id="results">Running tests...</pre>
-    
-    <script>
-        (async function() {
-            let results = [];
-            let fakeAllowClicked = false;
+  <h1>🔒 Security Sandbox Test Page</h1>
+  <p>This page tries to simulate common malicious behaviors. Review what actions succeed or fail.</p>
 
-            // 1. Test Camera Access & UI Spoofing Attempt
-            try {
-                let fakeUI = document.createElement("div");
-                fakeUI.style.position = "absolute";
-                fakeUI.style.top = "50%";
-                fakeUI.style.left = "50%";
-                fakeUI.style.transform = "translate(-50%, -50%)";
-                fakeUI.style.background = "white";
-                fakeUI.style.color = "black";
-                fakeUI.style.padding = "20px";
-                fakeUI.style.border = "2px solid black";
-                fakeUI.style.zIndex = "9999";
-                fakeUI.style.boxShadow = "0px 0px 10px rgba(0,0,0,0.5)";
-                fakeUI.innerHTML = `<b>example.com</b> wants to access your camera.<br>
-                    <button id="fakeAllow">Allow</button>
-                    <button id="fakeDeny">Deny</button>`;
-                document.body.appendChild(fakeUI);
-                
-                document.getElementById("fakeAllow").onclick = function() {
-                    fakeAllowClicked = true;
-                    alert('Fake Allow Clicked!');
-                    document.body.removeChild(fakeUI);
-                    setTimeout(() => {
-                        navigator.mediaDevices.getUserMedia({ video: true })
-                            .then(() => results.push("❌ Camera access granted after fake prompt! This suggests a possible spoofing attack."))
-                            .catch(() => results.push("✅ User denied real camera request."));
-                    }, 3000); // Delay the real request to mimic delayed interaction
-                };
+  <pre id="output"></pre>
 
-                document.getElementById("fakeDeny").onclick = function() {
-                    document.body.removeChild(fakeUI);
-                    results.push("✅ User denied fake camera request.");
-                };
-            } catch (e) {
-                results.push("✅ Camera access requires user permission.");
-            }
+  <script>
+    const output = document.getElementById("output");
 
-            // 2. Clickjacking & Overlay Test
-            try {
-                let overlay = document.createElement("iframe");
-                overlay.style.position = "absolute";
-                overlay.style.top = "0";
-                overlay.style.left = "0";
-                overlay.style.width = "100vw";
-                overlay.style.height = "100vh";
-                overlay.style.opacity = "0.1";
-                overlay.src = "https://example.com";
-                document.body.appendChild(overlay);
-                results.push("❌ Overlay clickjacking test: an invisible iframe was placed over the screen.");
-                setTimeout(() => document.body.removeChild(overlay), 5000);
-            } catch (e) {
-                results.push("✅ Clickjacking protections are working.");
-            }
+    function log(msg) {
+      output.textContent += msg + '\n';
+    }
 
-            // 3. Cross-Origin Camera Request Test (iframe attempting camera access)
-            try {
-                let iframe = document.createElement("iframe");
-                iframe.src = "https://example.com";
-                document.body.appendChild(iframe);
-                iframe.onload = () => {
-                    try {
-                        iframe.contentWindow.navigator.mediaDevices.getUserMedia({ video: true })
-                            .then(() => results.push("❌ Cross-origin camera request succeeded! Possible security misconfiguration."))
-                            .catch(() => results.push("✅ Cross-origin camera request blocked as expected."));
-                    } catch (e) {
-                        results.push("✅ Cross-origin camera request not allowed.");
-                    }
-                    document.body.removeChild(iframe);
-                };
-            } catch (e) {
-                results.push("✅ Cross-origin camera test could not be executed.");
-            }
+    async function runTests() {
+      // Geolocation
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          pos => log("🌍 Geolocation accessed: " + JSON.stringify(pos.coords)),
+          err => log("❌ Geolocation blocked: " + err.message)
+        );
+      } else {
+        log("❌ Geolocation API not available");
+      }
 
-            function displayResults() {
-                document.getElementById("results").textContent = results.join("\n");
-            }
+      // Microphone & Camera
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        log("🎥 Microphone/Camera access SUCCESS");
+        stream.getTracks().forEach(track => track.stop());
+      } catch (e) {
+        log("❌ Microphone/Camera access blocked: " + e.message);
+      }
 
-            displayResults();
-        })();
-    </script>
+      // Clipboard Read
+      try {
+        const text = await navigator.clipboard.readText();
+        log("📋 Clipboard text read: " + text);
+      } catch (e) {
+        log("❌ Clipboard read blocked: " + e.message);
+      }
+
+      // Permissions Query
+      try {
+        const permissions = ["geolocation", "microphone", "camera", "clipboard-read", "notifications"];
+        for (let name of permissions) {
+          const result = await navigator.permissions.query({ name });
+          log(`🔍 Permission ${name}: ${result.state}`);
+        }
+      } catch (e) {
+        log("❌ Permissions query failed: " + e.message);
+      }
+
+      // Fingerprinting Attempt
+      try {
+        const fingerprint = {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          languages: navigator.languages,
+          screen: {
+            width: screen.width,
+            height: screen.height,
+            colorDepth: screen.colorDepth
+          }
+        };
+        log("🧠 Fingerprint info: " + JSON.stringify(fingerprint));
+      } catch (e) {
+        log("❌ Fingerprinting blocked: " + e.message);
+      }
+
+      // Window top-level navigation test (frame breakout)
+      try {
+        if (window.top !== window.self) {
+          window.top.location = "https://example.com";
+          log("🚨 Tried to escape iframe!");
+        } else {
+          log("✅ Not inside an iframe.");
+        }
+      } catch (e) {
+        log("❌ Frame breakout blocked: " + e.message);
+      }
+
+      // Attempt Web Crypto API
+      try {
+        const key = await crypto.subtle.generateKey(
+          { name: "AES-GCM", length: 256 },
+          true,
+          ["encrypt", "decrypt"]
+        );
+        log("🔐 Web Crypto API accessible.");
+      } catch (e) {
+        log("❌ Web Crypto API access blocked.");
+      }
+
+      // Notification request
+      try {
+        const permission = await Notification.requestPermission();
+        log("🔔 Notification permission: " + permission);
+      } catch (e) {
+        log("❌ Notification request failed: " + e.message);
+      }
+    }
+
+    runTests();
+  </script>
 </body>
 </html>

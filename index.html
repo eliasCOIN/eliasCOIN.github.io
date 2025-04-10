@@ -22,7 +22,8 @@
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
           pos => log("🌍 Geolocation accessed: " + JSON.stringify(pos.coords)),
-          err => log("❌ Geolocation blocked: " + err.message)
+          err => log("❌ Geolocation blocked: " + err.message),
+          { enableHighAccuracy: true }
         );
       } else {
         log("❌ Geolocation API not available");
